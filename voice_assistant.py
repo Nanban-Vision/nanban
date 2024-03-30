@@ -11,29 +11,25 @@ from youtube_search import YoutubeSearch
 from pydub import AudioSegment
 from pydub.playback import play
 import speech_recognition as sr
-import openai
 import keyboard
 from gtts import gTTS
 import os
+from huggingface_hub import login
+from langchain.llms import HuggingFaceHub
 
-openai.api_key = ""
+# API Keys and Configuration
+ipdata_api_key = "593fe98fa91127b3b7a2f3ed538cf0b85ecf684657b128afbedb3744"
+client_id = 'b13fb24bbdc042e89f761a407c5fa189'
+client_secret = '2a72ff62b0364b1ea881978e62ea7abe'
 
-time = 'not_set'
-strTime = 'not set'
+# Hugging Face Configuration
+os.environ['HUGGINGFACEHUB_API_TOKEN'] = "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"
+login("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")
+gemma7b = HuggingFaceHub(repo_id='google/gemma-1.1-7b-it')
 
-def give_info_to_gpt():
-    global temp, strTime
-    search = "temperature in kerala"
-    url = f"https://www.google.com/search?q={search}"
-    r = requests.get(url)
-    data = BeautifulSoup(r.text, "html.parser")
-    temp_value = data.find("div", class_="BNeawe").text
-    temp = f"current {search} is {temp_value}"
-    strTime = datetime.datetime.now().strftime("%H:%M")
-    strTime = f"Sir, the time is {strTime}"
-
-give_info_to_gpt()
->>>>>>> c0c980d (Add files via upload)
+# Spotify Configuration
+client_credentials_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
+sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
 
 def takecommand():
     r = sr.Recognizer()
@@ -46,61 +42,101 @@ def takecommand():
     try:
         print("Recognizing...")
         query = r.recognize_google(audio)
-        print(f"User said: {query}\n")                                                                           
-
+        print(f"User said: {query}\n")
     except Exception as e:
         speak('Say that again please...')
         query = 'error'
     return query
-<<<<<<< HEAD
- 
-def speak(audio):
-    subprocess.call(['espeak', audio])
-   
-client_id = ''
-client_secret = ''
-=======
 
 def speak(text, lang='en', output_file='speech.mp3'):
     tts = gTTS(text=text, lang=lang)
     tts.save(output_file)
     os.system("mpg321 " + output_file)
 
-client_id = 'b13fb24bbdc042e89f761a407c5fa189'
-client_secret = '2a72ff62b0364b1ea881978e62ea7abe'
->>>>>>> c0c980d (Add files via upload)
+def remove_unwanted_characters(input_text):
+    characters_to_remove = ["*", "_", "?", ">", "<", "=", "^", "(", ")", "{", "}", "[", "]", "#", "'", "#", "`"]
+    for char in characters_to_remove:
+        input_text = input_text.replace(char, "")
+    return input_text
 
-client_credentials_manager = SpotifyClientCredentials(client_id=client_id, client_secret=client_secret)
-sp = spotipy.Spotify(client_credentials_manager=client_credentials_manager)
+def get_time():
+    return datetime.datetime.now().strftime("%H:%M")
 
-def spotify(query):
-    # Search for the song
-    results = sp.search(q=query, limit=1)
+def search_google(query, num_results=10):
+    search_url = f"https://www.google.com/search?q={query}&num={num_results}"
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+    response = requests.get(search_url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    snippets = []
+    for result in soup.find_all('div', class_='tF2Cxc'):
+        snippet = result.find('span', class_='aCOpRe')
+        if snippet:
+            snippets.append(snippet.text)
+    
+    return '\n'.join(snippets)
 
-    # Extract track details
-    track = results['tracks']['items'][0]
-    track_name = track['name']
-    track_artist = track['artists'][0]['name']
-    track_preview_url = track['preview_url']
+def get_location():
+    url = f'https://api.ipdata.co?api-key={ipdata_api_key}'
+    return requests.get(url).json()
 
-    print(f"Now playing: {track_name} by {track_artist}")
+def gemma7b_response(input_text, context, length):
+    search_results = search_google(input_text)
+    location = get_location()
+    city = location.get('city', 'Unknown')
+    country = location.get('country_name', 'Unknown')
+    local_time = get_time()
+    
+    template = f"""
+    ###context:{context},
+    ###instruction:Provide the complete answer,also you can use the search results which I have got for the same query but I cannot confirm its related please carefully access if its need and if its needed you can assist in providing the response to the user.Also make sure to use proper grammer and other characters as this is being read by a text to speech program also you are allowed to your own answer its not necessary you use the google results but for information like time and stuff which changes like you might not exactly know of right now please refer the search results and using that please provide trhe approprita answer in a human friendly way.Also you can use all the other informatioh provided if necessary.Please dont use unnecessary information and just respond with the information the user asked for 
+    ###Search Results from Google for the Same Query: {search_results}
+    ###Users country of origin : {country}
+    ###Users city of origin : {city}
+    ###Users local time: {local_time}
+    ###length: {length}
+    ###question:{input_text},
+    ###answer:
+    """
+    response = gemma7b(template).split("###answer:")[1].split("**Answer:**")[0]
+    return response
 
-    # If song has no preview URL, exit
-    if track_preview_url is None:
-        print("Sorry, the song cannot be played.")
-        return
+def get_response(input_text):
+    context = """
+    The guy who is asking the question is a blind person who is using you inside the product Nanban.
+    You are being used as a voice assistant to answer his queries please answer fully and carefully.
+    Please dont leave out any point even though its needs to be if its needed the answer can always
+    be long also make sure to respond every question with words only avoid using symbols and numbers
+    if needed the numbers and symbols should be expressed in word form.
+    """
+    length = "as long as possible"
+    response = gemma7b_response(input_text, context, length)
+    clean_response = remove_unwanted_characters(response)
+    speak(clean_response)
 
-    song_content = AudioSegment.from_file(io.BytesIO(requests.get(track_preview_url).content))
-    play(song_content)
+def search_song():
+    while True:
+        speak("please confirm the song you want to hear or use exit to exit")
+        video = takecommand().lower()
+    
+        if video == "error":
+            continue
+        elif video == "exit":
+            speak("Exiting music mode")
+            break
 
-def search_song(query):
-    results = YoutubeSearch(query, max_results=1).to_dict()
-    if results:
-        video_id = results[0]['id']
-        url = f"https://www.youtube.com/watch?v={video_id}"
-        return url
-    else:
-        return None
+        results = YoutubeSearch(video, max_results=1).to_dict()
+        if results:
+            video_id = results[0]['id']
+            url = f"https://www.youtube.com/watch?v={video_id}"
+            speak("Downloading song from youtube...")
+            download_audio(url)
+            speak("Playing song...")
+            play_song()
+        else:
+            speak("song not found")
 
 def download_audio(url):
     yt = YouTube(url)
@@ -111,81 +147,47 @@ def play_song():
     song = AudioSegment.from_file("temp_song")
     play(song)
 
-def latestnews():
-    api_dict = {
-        "business": "https://newsapi.org/v2/top-headlines?country=in&category=business&apiKey=68412fb931c1440eab8524ba2128d068",
-        "entertainment": "https://newsapi.org/v2/top-headlines?country=in&category=entertainment&apiKey=68412fb931c1440eab8524ba2128d068",
-        "health": "https://newsapi.org/v2/top-headlines?country=in&category=health&apiKey=68412fb931c1440eab8524ba2128d068",
-        "science": "https://newsapi.org/v2/top-headlines?country=in&category=science&apiKey=68412fb931c1440eab8524ba2128d068",
-        "sports": "https://newsapi.org/v2/top-headlines?country=in&category=sports&apiKey=68412fb931c1440eab8524ba2128d068",
-        "technology": "https://newsapi.org/v2/top-headlines?country=in&category=technology&apiKey=68412fb931c1440eab8524ba2128d068"
-    }
-
-    content = None
-    url = None
-    speak("Which field news do you want, [business], [health], [technology], [sports], [entertainment], [science]")
-    news_read = False
-    while news_read == False:
-        field = takecommand()
-        for key, value in api_dict.items():
-            if key.lower() in field.lower():
-                url = value
-                news_read = True
-            else:
-                url = True
-        if url is True:
-            pass
+def helpline(input_text):
+    speak("please ask the questions you want and use exit to exit whenever you want")
+    context = """
+    [Your existing helpline context here]
+    """
+    instruction = """
+    Please use the context to help you answer the question, the user is a blind person 
+    who is using nanban which a device running on the raspberry pi 5. You are being used in the nanban
+    helpline to help the use remember this guy is a blind person he might not be able to do a lot of things
+    he might not even know that a raspberry pi is inside dont go like display nanban doesnt have a display 
+    the complete communication is through voice remember you can use questions outside the context
+    these you could consider as some examples to get an idea of how to answer and if a similar 
+    question pops up you can easily answer. Please answer to just what the user asks dont try to do anything else
+    """
+    
+    while True:
+        query = takecommand().lower()
+        if query == "exit":
+            speak("Exiting help mode")
+            break
         else:
-            news = requests.get(url).text
-            news = json.loads(news)
-            speak("Here is the first news.")
-
-            arts = news["articles"]
-
-            for articles in arts:
-                article = articles["title"]
-                speak(article)
+            template = f"""
+            ###context:{context},
+            ###Instruction: {instruction},
+            ###length: as long as possible never stop in between this will cause confuse the blind person
+            ###question:{query},
+            ###answer:
+            """
+            response = gemma7b(template).split("###answer:")[1].split("**Answer:**")[0]
+            clean_response = remove_unwanted_characters(response)
+            speak(clean_response)
 
 def voice_mode():
     query = takecommand().lower()
-
-    if query == 'spotify':
-        speak("please confirm the song you want to hear")
-        track = takecommand().lower()
-        spotify(track)
     
-    elif query == 'youtube':
-        speak("please confirm the video you want to hear")
-        track = takecommand().lower()
-        url = search_song(track)
+    if query == 'error':
+        return
         
-        if url:
-            print("Downloading song...")
-            download_audio(url)
-            print("Playing song...")
-            play_song()
-            
-        else:
-            print("No results found for the given query.")
-
-    elif query == 'news':
-        latestnews()
-
-    elif query == 'error':
-        pass
-
+    if query in ["music mode", "music mod"]:
+        search_song() 
+    elif query in ["help mode", "help mod"]:
+        helpline(query)
     else:
-        question = query + 'response like you are a normal person and a companion to this person'
-
-        output = openai.ChatCompletion.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that provides descriptions to blind people. Here are some information you might be able to assist with " + 
-                'current temperature or weather is ' + temp + ' current time is ' + strTime + ' use these information incase user asks the user may hot ask for it but here it is just incase and if the use does not ask dont use it and respond normally like as assistant to a blind person '},
-                {"role": "user", "content": question}
-            ])
-
-        response = output['choices'][0]['message']['content'].strip()
-        speak(response)
-
-
+        get_response(query)
