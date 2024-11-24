@@ -1,60 +1,84 @@
-# Nanban
+# Nanban Vision Model (Archive)
+This is an archived version of the original Nanban vision-based assistive device system. This implementation used Raspberry Pi and YOLOv8 for object detection and distance measurement.
 
-Nanban is a device designed to aid the visually impaired by scanning its surroundings and providing auditory feedback to the user. It is built using the Raspberry Pi platform and incorporates object detection, distance measurement, and voice assistant capabilities.
+## Overview
+Nanban was developed as an assistive device for the visually impaired, combining object detection, distance measurement, and voice assistant capabilities. The system used a Raspberry Pi platform to process camera input and provide auditory feedback to users.
 
-## Introduction
-Nanban is a versatile device equipped with features to assist the visually impaired in navigating their surroundings and accessing useful information. With its object detection mode and voice assistant mode, users can interact with the device to gain awareness of their environment and receive helpful insights.
+## Core Features
 
-## Features
 ### Object Detection Mode
-- Nanban utilizes a camera to detect objects in the user's surroundings.
-- Distance measurement functionality provides approximate distances to detected objects using predetermined average widths and the object pixel width which is provided by YOLOv8.
-- Mathematical equations, including trigonometric calculations, are employed for distance approximation.
+- Camera-based object detection using YOLOv8
+- Distance measurement using geometric calculations
+- Real-time object recognition and distance approximation using:
+  - Predetermined average object widths
+  - Object pixel width from YOLOv8
+  - Trigonometric calculations for distance estimation
 
 ### Voice Assistant Mode
-- Users can switch to voice assistant mode to access various functionalities:
-  - Get current time, temperature, and news updates.
-  - Access YouTube for audio playback.
-  - Interact with a friendly and emotionally bonding assistant.
+- Real-time information services:
+  - Current time and temperature
+  - News updates
+  - YouTube audio playback
+- Interactive voice assistant for user queries
 
-### Hardware
-- Raspberry Pi is the primary hardware platform used for Nanban.
-- Two switches are integrated into the device for mode switching and volume control.
+### Hardware Configuration
+- Raspberry Pi as the main processing unit
+- Dual switch system:
+  - Mode switching capability
+  - Volume control functionality
 
-## Files
-- **main.py**: Main file responsible for running the Nanban device.
-- **main_mode.py**: Implements the object detection mode functionality.
-- **voice_assistant_mode.py**: Implements the voice assistant mode functionality.
-- **widths.yaml**: Contains predetermined average widths of objects for distance measurements.
-- **pulse.py**: Manages the second switch, controlling volume and program pausing/resuming.
-- **Nanban_launcher.desktop**: Allows the launch of Nanban on the startup of Raspberry Pi.
+## System Components
 
-## Usage
-To use Nanban, follow these steps:
-1. Connect the Raspberry Pi to necessary peripherals (camera, switches, etc.).
-2. Run the `main.py` file to start the Nanban device.
-3. Switch between object detection mode and voice assistant mode using the designated switches.
-4. Interact with Nanban to receive auditory feedback and assistance.
+### Core Files
+- `main.py` - System entry point and initialization
+- `main_mode.py` - Object detection implementation
+- `voice_assistant_mode.py` - Voice assistant services
+- `widths.yaml` - Object width reference data
+- `pulse.py` - Switch control and volume management
+- `Nanban_launcher.desktop` - Raspberry Pi autostart configuration
 
-## Future Development
-The Nanban project is an ongoing effort, and future developments may include:
-- Refinement of object detection algorithms for improved accuracy.
-- Integration of additional voice assistant functionalities.
-- Enhancement of user interface and accessibility features.
+## Installation Guide
 
-##Installation
-1.Clone the repository:
+1. Clone the repository:
+```bash
+git clone https://github.com/arungeorgesaji/Nanban.git
+```
 
-    git clone https://github.com/arungeorgesaji/Nanban.git
+2. Install required packages:
+```bash
+sudo apt-get install pip mpg321
+pip install gpiozero pulsectl ultralytics gtts opencv-python pyyaml spotipy requests beautifulsoup4 pytube youtube-search-python pydub SpeechRecognition keyboard youtube-dl huggingface_hub langchain_community openai
+```
 
-2.Install Packages:
+3. Configure autostart:
+   - Create `.config/autostart` directory if it doesn't exist
+   - Copy `Nanban_launcher.desktop` to `.config/autostart`
+   - Update the path in `Nanban_launcher.desktop` to point to your `main.py` location
+   - Reboot the system
 
-    sudo apt-get install pip mpg321 && pip install gpiozero pulsectl ultralytics gtts opencv-python pyyaml spotipy requests beautifulsoup4 pytube youtube-search-python pydub SpeechRecognition keyboard youtube-dl huggingface_hub langchain_community openai
+## Usage Instructions
 
-3.Make nanban run on startup:
+1. Hardware Setup:
+   - Connect the Raspberry Pi to required peripherals
+   - Ensure camera and switches are properly connected
 
-- Move the Nanban_launcher.desktop into .config/autostart(create autostart if it does not exist also .config is hidden folder)
-- Change the path given inside the Nanban_launcher.desktop to represent the correct path to main.py inside the cloned folded named Nanban
-- Now reboot for the changes to take effect
+2. System Operation:
+   - Launch system via `main.py`
+   - Use switches to toggle between modes:
+     - Object Detection Mode for environmental awareness
+     - Voice Assistant Mode for information services
 
-    
+## Development Notes
+
+### Object Detection
+- Utilized YOLOv8 for real-time object detection
+- Implemented distance calculation using geometric principles
+- Integrated predetermined object width data for accuracy
+
+### Voice Assistant
+- Incorporated multiple information services
+- Implemented interactive voice communication
+- Added multimedia playback capabilities
+
+## Archival Note
+This version of Nanban represents the original vision-based implementation. It has been archived to preserve the development history as the project moves forward with new approaches and technologies.
